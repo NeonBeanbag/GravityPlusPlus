@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="GravityPanel.PanelWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:pages="using:GravityPanel.Pages"
+    Title="Gravity 音响面板">
+
+    <!-- 无边框面板：底色一律不设，透明给 Mica 透出来；只在 Mica/亚克力都不可用时兜底纯色 -->
+    <Grid x:Name="Root" Padding="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- 页眉：只剩名字 + 音源徽章，状态一律不写在这里 -->
+        <Grid Grid.Row="0" x:Name="Header" ColumnSpacing="10" Margin="0,0,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Image Grid.Column="0" x:Name="Logo" Width="28" Height="28" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1" Text="Gravity++" VerticalAlignment="Center"
+                       Style="{StaticResource BodyStrongTextBlockStyle}" />
+            <Border Grid.Column="2" x:Name="SourceBadge" CornerRadius="6" Padding="8,2" VerticalAlignment="Center"
+                    Visibility="Collapsed" Background="{ThemeResource AccentFillColorDefaultBrush}">
+                <TextBlock x:Name="SourceBadgeText" Text="—" FontSize="12"
+                           Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
+            </Border>
+        </Grid>
+
+        <!-- 只有一页：正在播放 / 音量 / 设备连接（含配网）。窗口高度跟着它的内容走 -->
+        <pages:HomePage Grid.Row="1" x:Name="Home" VerticalAlignment="Top" />
+    </Grid>
+</Window>

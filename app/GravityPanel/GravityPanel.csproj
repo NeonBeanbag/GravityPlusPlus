@@ -1,0 +1,65 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- WinUI3 免打包：TFM 必须带 Windows 版本；19041 = Mica/亚克力控制器与 SMTC 都拿得到的下限 -->
+    <TargetFramework>net9.0-windows10.0.19041.0</TargetFramework>
+    <UseWindowsAppSDK>true</UseWindowsAppSDK>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <PlatformTarget>x64</PlatformTarget>
+    <Platform>x64</Platform>
+    <UseRidGraph>true</UseRidGraph>
+    <EnableDynamicPlatformCompilation>false</EnableDynamicPlatformCompilation>
+    <RuntimeIdentifiers>win-x64;win10-x64</RuntimeIdentifiers>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <!-- ★ 官方模板化控件(Pivot/Button/Slider/InfoBar…)的主题资源在 Microsoft.UI.Xaml.Controls.pri 里，
+         PRI 一关 Application.Resources 注册即 0x8000FFFF，控件构造直接原生崩溃(0xC000027B)。
+         工具链路径由同目录 Directory.Build.props 喂。 -->
+    <AppxGeneratePriEnabled>true</AppxGeneratePriEnabled>
+
+    <!-- 入口点在自己手里(Program.cs：DPI 感知要先于任何窗口/XAML)，
+         所以屏蔽 XAML 生成的那个 Main，否则 CS0017 多个入口点。 -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+
+    <AssemblyName>GravityPanel</AssemblyName>
+    <AssemblyTitle>Gravity 音响面板</AssemblyTitle>
+    <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
+    <Version>0.2.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 1.8.250907003 是本机探针实测能让 XamlControlsResources 装载起来的那一版(1.5 会启动即崩) -->
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.250907003" />
+    <PackageReference Include="H.NotifyIcon.WinUI" Version="2.1.0" />
+    <PackageReference Include="System.Drawing.Common" Version="8.0.7" />
+    <!-- ★ 不要再引 Microsoft.Web.WebView2：WindowsAppSDK 自带一份 WebView2 投影(类型在 Microsoft.WinUI 里)，
+         再引会 CS0433(CoreWebView2 同时存在于两个程序集)。 -->
+  </ItemGroup>
+
+  <!-- 引擎不复制第二份：直接链旧项目的源文件(命名空间仍是 GravityTray) -->
+  <ItemGroup>
+    <Compile Include="..\GravityTray\Cooee.cs" Link="Core\Cooee.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\icon.ico" Link="icon.ico" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\icon-src.png" Link="icon.png" CopyToOutputDirectory="PreserveNewest" />
+    <!-- fix-firewall.ps1 必须落在输出目录根部：EnvCheck.FixFirewall 找的是 BaseDirectory\fix-firewall.ps1 -->
+    <Content Include="Assets\fix-firewall.ps1" Link="fix-firewall.ps1" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- dotnet publish 只带框架那三个 .pri，不会带 GravityPanel.pri；缺它 XamlControlsResources
+       装载不上(merged=0)。走 ComputeFilesToPublish 之后的扩展点补进来。 -->
+  <Target Name="IncludeAppPriInPublish" AfterTargets="ComputeFilesToPublish">
+    <ItemGroup>
+      <ResolvedFileToPublish Include="$(OutDir)$(AssemblyName).pri"
+                             Condition="Exists('$(OutDir)$(AssemblyName).pri')">
+        <RelativePath>$(AssemblyName).pri</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+</Project>

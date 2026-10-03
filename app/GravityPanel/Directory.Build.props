@@ -1,0 +1,13 @@
+<Project>
+  <!-- 裸 `dotnet build` 会把 MSBuildExtensionsPath 算成 dotnet SDK 目录、VisualStudioVersion
+       算成 18.0，于是去找 <sdk>\Microsoft\VisualStudio\v18.0\AppxPackage\（不存在）而报 MSB4062。
+       按本机 VS 2022 Community 的 v17.0 路径把两个属性喂回去，PRI 生成才能跑起来。
+       ★ 两个都要给：只给 AppxMSBuildToolsPath 会过掉 MSB4062，但接着在
+         MSB4044(DefaultResourceLanguage) 上失败（该值由 AppxMSBuildTaskAssembly 里的任务算出）。
+       条件保证：走 VS 开发者命令行时两属性已由环境设好，不会被覆盖。
+       （与 AgentLauncher 同一条实测结论，照抄。） -->
+  <PropertyGroup Condition="'$(MSBuildExtensionsPath)' != '' and $(MSBuildExtensionsPath.Contains('dotnet')) ">
+    <AppxMSBuildToolsPath Condition="'$(AppxMSBuildToolsPath)' == ''">C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Microsoft\VisualStudio\v17.0\AppxPackage\</AppxMSBuildToolsPath>
+    <AppxMSBuildTaskAssembly Condition="'$(AppxMSBuildTaskAssembly)' == ''">C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Microsoft\VisualStudio\v17.0\AppxPackage\Microsoft.Build.AppxPackage.dll</AppxMSBuildTaskAssembly>
+  </PropertyGroup>
+</Project>

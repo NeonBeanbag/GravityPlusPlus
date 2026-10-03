@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gravity 音响 · Windows 控制面板</title>
+<style>
+  :root { --bg:#111418; --card:#1a1f26; --line:#2a313b; --fg:#e6e9ee; --dim:#8b95a3; --acc:#7c5cff; --ok:#38c172; --bad:#e05252; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--fg); font:14px/1.6 "Segoe UI","Microsoft YaHei",sans-serif; padding:20px 24px 28px; max-width:880px; margin:0 auto; }
+  .head { display:flex; align-items:center; gap:10px; }
+  .head img { width:34px; height:34px; border-radius:6px; display:block; }
+  h1 { font-size:19px; margin-bottom:2px; }
+  .sub { color:var(--dim); margin-bottom:14px; font-size:12px; }
+  /* pivot 式分页：文字 + 紫色指示条 */
+  .tabs { display:flex; gap:22px; border-bottom:1px solid var(--line); margin-bottom:16px; }
+  .tabs button { background:none; border:0; color:var(--dim); padding:8px 2px 10px; cursor:pointer; font-size:14px; position:relative; }
+  .tabs button.on { color:var(--fg); }
+  .tabs button.on::after { content:""; position:absolute; left:0; right:0; bottom:-1px; height:2px; background:var(--acc); border-radius:2px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:6px; padding:16px; margin-bottom:14px; }
+  .card h2 { font-size:13px; color:var(--dim); font-weight:600; margin-bottom:10px; letter-spacing:.02em; }
+  button { background:#232a33; color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:7px 14px; cursor:pointer; font-size:13px; }
+  button:hover:not(:disabled) { border-color:var(--acc); }
+  button:disabled { opacity:.45; cursor:default; }
+  button.primary { background:var(--acc); border-color:var(--acc); color:#fff; }
+  button.dark { background:#0d1014; border-color:var(--line); }
+  button.icon { font-size:18px; padding:8px 16px; }
+  button.mini { padding:4px 9px; font-size:12px; }
+  input[type=text], input[type=password], select { background:#0d1014; border:1px solid var(--line); color:var(--fg); border-radius:6px; padding:7px 10px; font-size:13px; }
+  input[type=range] { width:100%; accent-color:var(--acc); }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .col { display:flex; flex-direction:column; gap:6px; }
+  .dot { width:9px; height:9px; border-radius:50%; display:inline-block; background:#666; }
+  .dot.on { background:var(--ok); } .dot.off { background:var(--bad); }
+  .kv { display:grid; grid-template-columns:auto 1fr; gap:4px 10px; font-size:12px; color:var(--dim); }
+  .kv b { color:var(--fg); font-weight:600; }
+  .now { display:flex; gap:16px; }
+  .cover { width:110px; height:110px; border-radius:6px; background:#0d1014; object-fit:cover; flex-shrink:0; }
+  .title { font-size:17px; font-weight:600; } .artist { color:var(--dim); margin-bottom:8px; }
+  .eq { display:flex; gap:6px; flex-wrap:wrap; }
+  .eq button.active, .pill.on { background:var(--acc); border-color:var(--acc); color:#fff; }
+  .transport { display:flex; gap:10px; margin-top:10px; }
+  .dpad { display:grid; grid-template-columns:repeat(3,56px); grid-template-rows:repeat(3,44px); gap:6px; }
+  .dpad button { padding:0; }
+  #touchpad { background:#0d1014; border:1px dashed var(--line); border-radius:6px; width:100%; height:220px; touch-action:none; cursor:crosshair; position:relative; }
+  #touchpad span { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--dim); font-size:12px; pointer-events:none; }
+  pre.out { background:#0d1014; border:1px solid var(--line); border-radius:6px; padding:8px; font-size:12px; max-height:160px; overflow:auto; white-space:pre-wrap; margin-top:8px; }
+  .hidden { display:none; }
+  .vol-num { min-width:42px; text-align:right; color:var(--dim); }
+  .bar { height:4px; background:#0d1014; border-radius:4px; overflow:hidden; margin-top:10px; }
+  .bar i { display:block; height:100%; width:0; background:var(--acc); transition:width .2s linear; }
+  .list { max-height:230px; overflow:auto; border:1px solid var(--line); border-radius:6px; }
+  .list div { padding:7px 10px; font-size:13px; cursor:pointer; display:flex; gap:8px; justify-content:space-between; border-bottom:1px solid #222831; }
+  .list div:last-child { border-bottom:0; }
+  .list div:hover { background:#20262f; }
+  .list small { color:var(--dim); }
+  .note { font-size:12px; color:var(--dim); margin-top:8px; line-height:1.55; }
+  .warn { color:#ffb454; }
+</style>
+</head>
+<body>
+<div class="head">
+  <img src="/icon.png" alt="" onerror="this.style.display='none'">
+  <div>
+    <h1>Gravity 音响 · Windows 控制面板</h1>
+    <div class="sub">配网走逆向的 cooee 空中通道；控制走 7766；投屏走标准 UPnP AVTransport。全程不需要安卓手机。</div>
+  </div>
+</div>
+
+<div class="tabs" id="tabs">
+  <button data-tab="prov" class="on">配网</button>
+  <button data-tab="ctrl">控制</button>
+  <button data-tab="cast">投屏播放</button>
+</div>
+
+<!-- ================= 配网 ================= -->
+<section data-pane="prov">
+  <div class="card">
+    <h2>环境自检</h2>
+    <div class="kv" id="envBox">
+      <span>本机 WLAN IP</span><b id="envIp">—</b>
+      <span>网卡「数据包合并」</span><b id="envCoal">—</b>
+      <span>推流端口入站规则</span><b id="envFw">—</b>
+    </div>
+    <div class="note" id="envNote">「数据包合并」开着时，一轮 3 个小包会被合成一次空口发送，音响看到的长度是几包之和 —— 这是纯 Windows 之前配不上的两个真原因之一，必须关掉。</div>
+  </div>
+
+  <div class="card">
+    <h2>发送配网包</h2>
+    <div class="row" style="margin-bottom:10px">
+      <label class="col" style="flex:1">
+        <span class="sub" style="margin:0">目标 Wi-Fi（2.4GHz）</span>
+        <input type="text" id="pvSsid" placeholder="如 MyWiFi-A" list="pvSsidList" style="width:100%">
+        <datalist id="pvSsidList"></datalist>
+      </label>
+      <label class="col" style="flex:1">
+        <span class="sub" style="margin:0">密码</span>
+        <input type="password" id="pvPass" placeholder="WiFi 密码" style="width:100%">
+      </label>
+    </div>
+    <div class="row">
+      <button id="btnPvStart" class="primary">开始配网</button>
+      <button id="btnPvStop" disabled>停止</button>
+      <button id="btnPvEnv" class="mini">重新自检</button>
+      <span id="pvState" class="sub" style="margin:0"></span>
+    </div>
+    <div class="bar"><i id="pvBar"></i></div>
+    <div class="note" id="pvHint">先在音响上同时按背面 <b>+</b> <b>−</b> 两秒进配网模式（屏幕出现配网页），再点开始。它进配网后会自己断开网络，解出来后会自动回线 —— <b>自己回线就是成功</b>。</div>
+    <pre class="out hidden" id="pvOut"></pre>
+  </div>
+</section>
+
+<!-- ================= 控制 ================= -->
+<section data-pane="ctrl" class="hidden">
+  <div class="card">
+    <h2>设备连接</h2>
+    <div class="row">
+      <input type="text" id="ip" placeholder="音响 IP，如 192.168.1.10" style="width:220px">
+      <button id="btnConnect" class="primary">连接</button>
+      <button id="btnScan">扫描局域网</button>
+      <span><span class="dot" id="dot"></span> <span id="devState" style="color:var(--dim)">未连接</span></span>
+      <span id="scanResult" class="row"></span>
+    </div>
+  </div>
+
+  <div class="card hidden" id="playCard">
+    <h2>正在播放</h2>
+    <div class="now">
+      <img class="cover" id="cover" alt="">
+      <div style="flex:1;min-width:0">
+        <div class="title" id="trackTitle">—</div>
+        <div class="artist" id="artistName">—</div>
+        <div class="transport">
+          <button class="icon" id="btnPrev" title="上一首">⏮</button>
+          <button class="icon primary" id="btnPlay" title="播放/暂停">▶</button>
+          <button class="icon" id="btnNext" title="下一首">⏭</button>
+          <button id="btnRefresh" title="刷新信息" style="margin-left:auto">⟳</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card hidden" id="volCard">
+    <h2>音量 <span id="curVolLabel" style="font-weight:400"></span></h2>
+    <div class="row">
+      <input type="range" id="vol" min="0" max="100" value="10">
+      <span class="vol-num" id="volNum">10</span>
+    </div>
+    <div class="sub" style="margin:6px 0 0">超过 25 音响可能过响，会要求确认（与官方控制端一致）</div>
+  </div>
+
+  <div class="card hidden" id="eqCard">
+    <h2>音效模式</h2>
+    <div class="eq" id="eqBtns"></div>
+  </div>
+
+  <div class="card hidden" id="remoteCard">
+    <h2>屏幕遥控（网络 adb）<span id="adbNote" style="font-weight:400;color:var(--dim)"></span></h2>
+    <div id="adbSetup" class="row hidden">
+      本机未找到 adb（platform-tools）。<button id="btnAdbDl">自动下载官方 platform-tools</button>
+    </div>
+    <div id="adbMain" class="hidden">
+      <div class="row" style="margin-bottom:12px">
+        <button id="btnAdbConnect">连接 adb (7788)</button>
+        <button data-key="4">返回</button>
+        <button data-key="26">电源</button>
+        <button data-key="66">确认</button>
+      </div>
+      <div class="row" style="align-items:flex-start;gap:20px">
+        <div class="dpad">
+          <span></span><button data-key="19">↑</button><span></span>
+          <button data-key="21">←</button><span></span><button data-key="22">→</button>
+          <span></span><button data-key="20">↓</button><span></span>
+        </div>
+        <div style="flex:1">
+          <div id="touchpad"><span>触屏区域：点击=轻触，拖动=滑动</span></div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <input type="text" id="cmdInput" placeholder="任意 shell 命令，如 dumpsys batterystats" style="flex:1">
+        <button id="btnCmd">执行</button>
+      </div>
+      <pre class="out hidden" id="cmdOut"></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 投屏 ================= -->
+<section data-pane="cast" class="hidden">
+  <div class="card">
+    <h2>把这台电脑的声音投过去（Apple Music 等任意播放器）</h2>
+    <div class="row">
+      <button id="btnSrcStart" class="primary">开始投放</button>
+      <button id="btnSrcStop" class="dark" disabled>停止</button>
+      <img id="srcArt" alt="" style="width:44px;height:44px;border-radius:6px;background:#0d1014;object-fit:cover" class="hidden">
+      <div class="col" style="flex:1;min-width:0">
+        <span id="srcTitle" style="font-weight:600">未投放</span>
+        <span class="sub" style="margin:0" id="srcMeta"></span>
+      </div>
+    </div>
+    <div class="note">抓的是"默认播放设备"的回环，所以任何软件出声都会过去；音响显示的歌名/封面来自 Windows 的系统级媒体信息（SMTC）。
+      换歌时会重推一次 URI，可能有约 1 秒静音；若音响不认封面，我再换"只更新元数据"那条路试。</div>
+  </div>
+
+  <div class="card">
+    <h2>推流到音响（UPnP MediaRenderer）</h2>
+    <div class="row" style="margin-bottom:10px">
+      <button id="btnCastDisc" class="primary">发现音响</button>
+      <span id="castState" class="sub" style="margin:0">未连接</span>
+    </div>
+    <div class="row">
+      <input type="text" id="castUrl" placeholder="或直接粘音频 URL，如 http://…/song.mp3" style="flex:1;min-width:240px">
+      <button id="btnCastUrl">推这个 URL</button>
+    </div>
+    <div class="transport" id="castCtl" style="margin-top:12px">
+      <button class="icon" id="btnCastPause" title="暂停">⏸</button>
+      <button class="icon" id="btnCastStop" title="停止">⏹</button>
+      <span class="sub" style="margin:auto 0 0" id="castPos">—</span>
+    </div>
+    <div class="note" id="castNote">推本地文件时面板会在本机开一个 HTTP 端口（8123）。<b>若显示成功却没声音、请求次数一直是 0，就是入站被防火墙挡了</b>——用「配网」页的自检一键修复。</div>
+  </div>
+
+  <div class="card">
+    <h2>本机音乐（点一下就投过去）</h2>
+    <div class="row" style="margin-bottom:8px">
+      <button id="btnPick" class="primary">选本地文件…</button>
+      <button id="btnLib" class="mini">扫描 音乐/下载 目录</button>
+      <span class="sub" style="margin:0" id="libNote"></span>
+    </div>
+    <div class="list hidden" id="libList"></div>
+  </div>
+</section>
+
+<script>
+const $ = id => document.getElementById(id);
+const EQ_NAMES = ['标准','Dirac','收音机','流行','古典','摇滚'];
+let ip = localStorage.getItem('gravity.ip') || '';
+let pollTimer = null, pvTimer = null, castTimer = null, curStatus = '', curEQ = -1;
+$('ip').value = ip;
+
+async function api(pathname, opts) { const r = await fetch(pathname, opts); return r.json(); }
+function speaker(pathname) { const sep = pathname.includes('?') ? '&' : '?'; return api(`${pathname}${sep}ip=${encodeURIComponent(ip)}`); }
+function setState(on, text) { $('dot').className = 'dot ' + (on ? 'on' : 'off'); $('devState').textContent = text; }
+
+// ---------- 分页（pivot） ----------
+$('tabs').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('[data-pane]').forEach(s => s.classList.toggle('hidden', s.dataset.pane !== b.dataset.tab));
+  if (b.dataset.tab === 'prov') envCheck();
+};
+
+// ---------- 环境自检 ----------
+async function envCheck() {
+  $('envIp').textContent = '读取中…';
+  const j = await api('/api/env').catch(() => null);
+  if (!j) { $('envIp').textContent = '自检失败'; return; }
+  $('envIp').textContent = j.localIp || '取不到';
+  const coal = j.coalescing || {}, fw = j.firewall || {};
+  $('envCoal').innerHTML = (coal.ok ? '<span class="dot on"></span> ' : '<span class="dot off"></span> ') + (coal.state || '?')
+    + (coal.ok ? '' : ` <button class="mini" data-fix="coalesce">一键关闭</button>`);
+  const fwTxt = fw.blocked ? '被 Block 规则挡住了' : (fw.allow ? '已放行' : '未放行');
+  $('envFw').innerHTML = `<span class="dot ${fw.ok ? 'on' : 'off'}"></span> ${fwTxt}`
+    + (fw.ok ? '' : ` <button class="mini" data-fix="firewall">${fw.blocked ? '清除拦截并放行' : '一键放行'} ${fw.port}</button>`);
+  if (fw.blocked) $('envNote').innerHTML = '<span class="warn">检测到系统自动给本程序生成的 <b>Block</b> 规则（当初放行弹窗被忽略就会出现），它优先于任何 Allow —— 症状是音响说在播放、但本机 HTTP 一次请求都收不到。点「清除拦截并放行」修掉。</span>';
+  const dl = $('pvSsidList'); dl.innerHTML = '';
+  (j.wifi?.list || []).forEach(w => {
+    const o = document.createElement('option'); o.value = w.ssid; o.label = `${w.ssid} · ${w.signal}% · 信道${w.channel}`;
+    dl.appendChild(o);
+  });
+  if (j.wifi?.current && !$('pvSsid').value) $('pvSsid').value = j.wifi.current;
+}
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-fix]'); if (!b) return;
+  b.disabled = true;
+  const r = await api('/api/env/fix', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ what: b.dataset.fix }) });
+  $('envNote').textContent = r.ok ? '已请求管理员权限：请在 UAC 弹窗点「是」，几秒后会自动重新自检。' : (r.note || '修复请求未发出');
+  setTimeout(envCheck, 6000);
+});
+$('btnPvEnv').onclick = envCheck;
+
+// ---------- 配网 ----------
+async function pvStatus() {
+  const j = await api('/api/provision/status' + (ip ? `?ip=${encodeURIComponent(ip)}` : ''));
+  if (j.running) {
+    $('pvState').textContent = `正在发：${j.passes} 遍 / ${j.packets} 包 / ${j.elapsed}s`;
+    $('pvBar').style.width = ((j.passes % 10) * 10) + '%';
+    $('btnPvStart').disabled = true; $('btnPvStop').disabled = false;
+  } else {
+    $('btnPvStart').disabled = false; $('btnPvStop').disabled = true;
+    if (j.passes) {
+      $('pvState').textContent = `已停：${j.passes} 遍 / ${j.packets} 包`;
+      $('pvBar').style.width = '100%';
+    }
+    if (j.error) $('pvState').textContent += ' · ' + j.error;
+    if (j.readback) {
+      $('pvOut').classList.remove('hidden');
+      $('pvOut').textContent = `守护进程回读：SSID/密码 = ${j.readback}\n（能读到值 = 固件已按长度还原出我们那一帧）`;
+    }
+  }
+  return j;
+}
+$('btnPvStart').onclick = async () => {
+  const ssid = $('pvSsid').value.trim(), pwd = $('pvPass').value;
+  if (!ssid || !pwd) { $('pvState').textContent = 'SSID 和密码都要填'; return; }
+  $('pvOut').classList.add('hidden');
+  const r = await api('/api/provision/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ssid, pass: pwd }) });
+  if (!r.ok) { $('pvState').textContent = '起不来：' + (r.error || ''); return; }
+  $('pvState').textContent = '已开打…';
+  clearInterval(pvTimer); pvTimer = setInterval(pvStatus, 1000);
+  localStorage.setItem('gravity.ssid', ssid);
+};
+$('btnPvStop').onclick = async () => { await api('/api/provision/stop', { method: 'POST' }); clearInterval(pvTimer); pvStatus(); };
+$('pvSsid').value = localStorage.getItem('gravity.ssid') || '';
+
+// ---------- 连接 / 扫描 ----------
+$('btnConnect').onclick = async () => {
+  ip = $('ip').value.trim(); if (!ip) return;
+  localStorage.setItem('gravity.ip', ip);
+  setState(false, '连接中…');
+  const r = await api(`/api/ping?ip=${encodeURIComponent(ip)}`);
+  if (r.ok) {
+    setState(true, `已连接 ${ip}`);
+    ['playCard','volCard','eqCard','remoteCard'].forEach(id => $(id).classList.remove('hidden'));
+    refreshStatus(); refreshInfo();
+    clearInterval(pollTimer); pollTimer = setInterval(refreshStatus, 5000);
+  } else setState(false, '连不上（检查 IP / 同网段 / 音响已开机）');
+  checkAdb();
+};
+$('btnScan').onclick = async () => {
+  $('btnScan').disabled = true; $('scanResult').textContent = '扫描中…';
+  const { found } = await api('/api/scan');
+  $('scanResult').innerHTML = '';
+  if (!found.length) $('scanResult').textContent = '未发现设备';
+  for (const f of found) {
+    const b = document.createElement('button'); b.textContent = f;
+    b.onclick = () => { $('ip').value = f; $('btnConnect').click(); };
+    $('scanResult').appendChild(b);
+  }
+  $('btnScan').disabled = false;
+};
+
+// ---------- 播放状态 ----------
+async function refreshStatus() {
+  try {
+    const j = await speaker('/api/status');
+    const d = j.data || {};
+    curStatus = d.status || '';
+    $('trackTitle').textContent = d.playList?.trackList?.[0]?.trackTitle || '（无播放）';
+    $('artistName').textContent = d.playList?.trackList?.[0]?.artistName || '';
+    const cu = d.playList?.trackList?.[0]?.coverUrl;
+    $('cover').src = cu && /^https?:/.test(cu) ? `/api/cover?url=${encodeURIComponent(cu)}` : '';
+    $('btnPlay').textContent = curStatus === 'STARTED' ? '⏸' : '▶';
+    if (typeof d.EQMode === 'number') setEqActive(d.EQMode);
+  } catch { setState(false, '连接已断开'); }
+}
+$('btnRefresh').onclick = refreshStatus;
+$('btnPlay').onclick = async () => { await speaker(curStatus === 'STARTED' ? '/api/pause' : '/api/play'); refreshStatus(); };
+$('btnPrev').onclick = () => speaker('/api/prev');
+$('btnNext').onclick = () => speaker('/api/next');
+
+// ---------- 音量 ----------
+$('vol').oninput = () => $('volNum').textContent = $('vol').value;
+$('vol').onchange = async () => {
+  const v = Number($('vol').value);
+  if (v > 25 && !confirm(`音量 ${v} 可能过大，确认调整？`)) { refreshInfo(); return; }
+  await speakerPost('/api/set-volume', v);
+};
+async function speakerPost(pathname, value) {
+  await fetch(`${pathname}?ip=${encodeURIComponent(ip)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ value }) });
+}
+async function refreshInfo() {
+  try {
+    const j = await speaker('/api/info');
+    const v = j.data?.currentVolume;
+    if (typeof v === 'number') { $('vol').value = v; $('volNum').textContent = v; $('curVolLabel').textContent = `当前 ${v}`; }
+  } catch {}
+}
+
+// ---------- EQ ----------
+EQ_NAMES.forEach((name, i) => {
+  const b = document.createElement('button'); b.textContent = name; b.dataset.eq = i;
+  b.onclick = async () => { await speakerPost('/api/set-eq', i); setEqActive(i); };
+  $('eqBtns').appendChild(b);
+});
+function setEqActive(i) {
+  if (i === curEQ) return; curEQ = i;
+  document.querySelectorAll('#eqBtns button').forEach(b => b.classList.toggle('active', Number(b.dataset.eq) === i));
+}
+
+// ---------- adb 遥控 ----------
+let adbReady = false, screen = { w: 1080, h: 1920 };
+async function checkAdb() {
+  const { available } = await api('/api/adb/env');
+  $('adbSetup').classList.toggle('hidden', available);
+  $('adbMain').classList.toggle('hidden', !available);
+  adbReady = available;
+  if (available) $('adbNote').textContent = ' · adb 可用';
+}
+$('btnAdbDl').onclick = async () => {
+  $('btnAdbDl').disabled = true; $('btnAdbDl').textContent = '下载解压中…（约 5MB）';
+  const r = await api('/api/adb/setup', { method: 'POST' });
+  $('btnAdbDl').textContent = r.ok ? '完成' : '失败：' + (r.error || '');
+  checkAdb();
+};
+async function adbShell(cmd) {
+  return await fetch('/api/adb/shell', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ip, cmd }) }).then(x => x.json());
+}
+$('btnAdbConnect').onclick = async () => {
+  const r = await fetch('/api/adb/connect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ip }) }).then(x => x.json());
+  $('adbNote').textContent = ' · ' + (r.out || r.error || '').trim().split('\n')[0];
+  if (r.ok) {
+    const sz = await adbShell('wm size');
+    const m = /(\d+)x(\d+)/.exec(sz.out || '');
+    if (m) screen = { w: +m[1], h: +m[2] };
+  }
+};
+document.querySelectorAll('[data-key]').forEach(b => b.onclick = () => adbShell(`input keyevent ${b.dataset.key}`));
+$('btnCmd').onclick = async () => {
+  const r = await adbShell($('cmdInput').value);
+  $('cmdOut').classList.remove('hidden');
+  $('cmdOut').textContent = (r.out || r.error || '(无输出)').trim();
+};
+
+// ---------- 触屏板 ----------
+const tp = $('touchpad');
+let tpStart = null;
+tp.addEventListener('pointerdown', e => { tpStart = { x: e.offsetX, y: e.offsetY }; });
+tp.addEventListener('pointerup', e => {
+  if (!tpStart) return;
+  const dx = e.offsetX - tpStart.x, dy = e.offsetY - tpStart.y;
+  const fx = px => Math.round(px / tp.clientWidth * screen.w);
+  const fy = px => Math.round(px / tp.clientHeight * screen.h);
+  if (Math.hypot(dx, dy) < 8) adbShell(`input tap ${fx(tpStart.x)} ${fy(tpStart.y)}`);
+  else adbShell(`input swipe ${fx(tpStart.x)} ${fy(tpStart.y)} ${fx(e.offsetX)} ${fy(e.offsetY)}`);
+  tpStart = null;
+});
+
+// ---------- PC 音源 ----------
+async function srcStatus() {
+  const j = await api('/api/source/status').catch(() => null); if (!j) return;
+  $('btnSrcStart').disabled = !!j.running;
+  $('btnSrcStop').disabled = !j.running;
+  if (j.title) $('srcTitle').textContent = j.title;
+  else $('srcTitle').textContent = j.running ? '已连接，等待媒体会话…' : '未投放';
+  const bits = [];
+  if (j.artist) bits.push(j.artist);
+  if (j.running) bits.push(`抓取 ${j.rate / 1000}kHz/${j.channels}ch · ${(j.bytes / 1024 / 1024).toFixed(1)}MB · 拉流端 ${j.listeners}`);
+  if (j.note) bits.push(j.note);
+  $('srcMeta').textContent = bits.join(' · ');
+  const a = $('srcArt');
+  if (j.hasArt && j.running) { a.classList.remove('hidden'); a.src = `/api/source/art?t=${Date.now()}`; }
+  else a.classList.add('hidden');
+}
+$('btnSrcStart').onclick = async () => {
+  $('btnSrcStart').disabled = true; $('srcTitle').textContent = '开始中…';
+  const r = await api('/api/source/start', { method: 'POST' }).catch(() => ({ ok: false, error: '请求失败' }));
+  if (!r.ok) { $('srcTitle').textContent = '起不来：' + (r.error || ''); $('btnSrcStart').disabled = false; }
+  srcStatus(); clearInterval(window.__srcT); window.__srcT = setInterval(srcStatus, 2000);
+};
+$('btnSrcStop').onclick = async () => { await api('/api/source/stop', { method: 'POST' }); clearInterval(window.__srcT); srcStatus(); };
+
+// ---------- 投屏 ----------
+async function castState() {
+  const j = await api('/api/stream/state').catch(() => null);
+  if (!j) return;
+  if (!j.ok) { $('castState').innerHTML = `<span class="dot off"></span> ${j.error || '未发现'}`; return; }
+  const playing = j.state === 'PLAYING';
+  $('castState').innerHTML = `<span class="dot ${playing ? 'on' : ''}"></span> ${j.state}${j.err ? ' · err=' + j.err : ''} · 本机已收到拉流 ${j.hits} 次`;
+  $('castPos').textContent = `位置 ${j.pos}`;
+  if (j.hits === 0 && playing) $('castNote').innerHTML = '<span class="warn">音响说在播放，但本机一次请求都没收到 → 入站被防火墙挡了，去「配网」页一键放行。</span>';
+}
+$('btnCastDisc').onclick = async () => {
+  $('castState').textContent = '发现中…';
+  const r = await api('/api/stream/discover');
+  $('castState').innerHTML = r.ok ? `<span class="dot on"></span> 已发现 ${r.ip}` : `<span class="dot off"></span> ${r.error || '没找到'}`;
+  if (r.ok) { castState(); clearInterval(castTimer); castTimer = setInterval(castState, 2000); }
+};
+$('btnCastUrl').onclick = async () => {
+  const u = $('castUrl').value.trim(); if (!u) return;
+  const r = await api('/api/stream/play', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: u }) });
+  $('castState').textContent = r.ok ? '已推送，等它拉流…' : '失败：' + (r.error || '');
+  setTimeout(castState, 1500);
+};
+$('btnCastStop').onclick = () => api('/api/stream/stop', { method: 'POST' }).then(castState);
+$('btnCastPause').onclick = () => api('/api/stream/pause', { method: 'POST' }).then(castState);
+$('btnPick').onclick = async () => {
+  $('btnPick').disabled = true; $('libNote').textContent = '在弹出的窗口里选文件…';
+  const r = await api('/api/stream/pick', { method: 'POST' }).catch(() => ({ ok: false, error: '弹窗失败' }));
+  $('btnPick').disabled = false;
+  $('libNote').textContent = r.ok ? '已推送 ' + (r.name || '') : (r.error || '未选文件');
+  if (r.ok) { $('castState').textContent = '推送中…'; setTimeout(castState, 1500); }
+};
+$('btnLib').onclick = async () => {
+  $('libNote').textContent = '扫描中…';
+  const j = await api('/api/stream/library');
+  const list = $('libList'); list.innerHTML = ''; list.classList.remove('hidden');
+  const files = j.files || [];
+  $('libNote').textContent = files.length ? `${files.length} 个文件` : '没找到音频文件（可以在上面直接粘 URL）';
+  for (const f of files.slice(0, 80)) {
+    const d = document.createElement('div');
+    d.innerHTML = `<span>${f.name}</span><small>${f.kb}KB</small>`;
+    d.onclick = async () => {
+      $('castState').textContent = '推送中…';
+      const r = await api('/api/stream/play', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: f.path }) });
+      $('castState').textContent = r.ok ? '已推送：' + f.name : '失败：' + (r.error || '');
+      setTimeout(castState, 1500);
+    };
+    list.appendChild(d);
+  }
+};
+
+// ---------- 首屏 ----------
+envCheck();
+if (ip) $('btnConnect').click();
+setInterval(() => { if (pvTimer) pvStatus(); }, 4000);
+</script>
+</body>
+</html>
