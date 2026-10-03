@@ -53,7 +53,7 @@ internal static class Art
     }
 }
 
-/// <summary>无头探针：`GravityPanel.exe --probe env --out 路径`，不开窗口、不抢前台，
+/// <summary>无头探针：`Gravity++.exe --probe env --out 路径`，不开窗口、不抢前台，
 /// 用来在没有音响的场合证明"页面读的那条数据通路本身是通的"。</summary>
 internal static class Probe
 {

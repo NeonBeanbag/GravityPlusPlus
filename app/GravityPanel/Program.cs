@@ -83,7 +83,7 @@ public static class Program
         catch (Exception ex)
         {
             Log.Write($"[FATAL] {ex}");
-            Native.MessageBoxW(IntPtr.Zero, $"启动失败:\n\n{ex?.GetType().Name}: {ex?.Message}\n\n(详见 GravityPanel.log)", "Gravity 面板", 0x10);
+            Native.MessageBoxW(IntPtr.Zero, $"启动失败:\n\n{ex?.GetType().Name}: {ex?.Message}\n\n(详见 Gravity++.log)", "Gravity++", 0x10);
         }
     }
 }

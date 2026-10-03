@@ -6,7 +6,7 @@ namespace GravityPanel;
 internal static class StartupRegistrar
 {
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
-    private const string ValueName = "GravityPanel";
+    private const string ValueName = "Gravity++";
 
     private static string ExePath => Environment.ProcessPath ?? "";
 

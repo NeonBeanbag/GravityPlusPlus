@@ -159,7 +159,7 @@ internal static partial class Native
 /// <summary>崩溃史全靠这行追加日志，别省。</summary>
 internal static class Log
 {
-    private static readonly string Path = System.IO.Path.Combine(AppContext.BaseDirectory, "GravityPanel.log");
+    private static readonly string Path = System.IO.Path.Combine(AppContext.BaseDirectory, "Gravity++.log");
 
     public static void Write(string s)
     {

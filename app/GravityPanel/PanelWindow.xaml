@@ -4,7 +4,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:pages="using:GravityPanel.Pages"
-    Title="Gravity 音响面板">
+    Title="Gravity++">
 
     <!-- 无边框面板：底色一律不设，透明给 Mica 透出来；只在 Mica/亚克力都不可用时兜底纯色 -->
     <Grid x:Name="Root" Padding="16">

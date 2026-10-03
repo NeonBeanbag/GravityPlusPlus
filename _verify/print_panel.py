@@ -12,9 +12,9 @@ class RECT(ctypes.Structure):
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 EXE = os.path.join(REPO, "app", "GravityPanel", "bin", "x64", "Debug",
-                   "net9.0-windows10.0.19041.0", "GravityPanel.exe")
+                   "net9.0-windows10.0.19041.0", "Gravity++.exe")
 pid = int(subprocess.run(["powershell", "-NoProfile", "-Command",
-    "(Get-Process GravityPanel -ErrorAction SilentlyContinue).Id"],
+    "(Get-Process 'Gravity++',GravityPanel -ErrorAction SilentlyContinue | Select -First 1).Id"],
     capture_output=True, text=True).stdout.strip())
 
 

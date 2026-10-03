@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace GravityPanel;
 
-/// <summary>全局热键门：别的软件/键盘用一条快捷键呼起面板（命令行 `GravityPanel.exe --toggle-panel` 是另一条入口）。
+/// <summary>全局热键门：别的软件/键盘用一条快捷键呼起面板（命令行 `Gravity++.exe --toggle-panel` 是另一条入口）。
 /// 用一个 HWND_MESSAGE 的隐藏窗口接 WM_HOTKEY —— 不去子类化 WinUI 的窗口，免得搞坏它的输入路由。</summary>
 internal sealed class HotkeyGate : IDisposable
 {

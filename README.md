@@ -33,7 +33,7 @@ dotnet build -c Release
 **呼起面板的两条对外接口**（给别的软件或快捷键用）：
 
 ```bash
-GravityPanel.exe --toggle-panel          # 单实例 IPC：面板没开就开，开着就关
+Gravity++.exe --toggle-panel          # 单实例 IPC：面板没开就开，开着就关
 ```
 
 全局热键 **Ctrl+Alt+G**。想换就改 `%LOCALAPPDATA%\Gravity++\panel.json` 里的 `Hotkey`，写法如 `Win+Shift+F8`；被别的程序占用时启动日志会写明并降级到上面两条。
@@ -41,9 +41,9 @@ GravityPanel.exe --toggle-panel          # 单实例 IPC：面板没开就开，
 无头自检（不开窗口、不抢前台，用来证明数据通路本身是通的）：
 
 ```bash
-GravityPanel.exe --probe env      # 当前 Wi-Fi / 网卡合并 / 防火墙 / 本机 WLAN IP
-GravityPanel.exe --probe send     # 配网包发得出去吗（3 秒假账号，随即停止）
-GravityPanel.exe --probe link     # 音响现在听谁 + 本机 SMTC 认到了什么
+Gravity++.exe --probe env      # 当前 Wi-Fi / 网卡合并 / 防火墙 / 本机 WLAN IP
+Gravity++.exe --probe send     # 配网包发得出去吗（3 秒假账号，随即停止）
+Gravity++.exe --probe link     # 音响现在听谁 + 本机 SMTC 认到了什么
 ```
 
 ## 配网（cooee / Airkiss）

@@ -62,4 +62,20 @@
       </ResolvedFileToPublish>
     </ItemGroup>
   </Target>
+
+  <!-- 对用户来说软件叫 Gravity++：把启动器（apphost）另拷一份成 Gravity++.exe。
+       程序集名必须留在 GravityPanel（XAML 资源按它查找），只有 exe 的名字是给人看的。
+       ★ 但 WinUI 的 XAML 资源包是**按进程名**找 pri 的：只改 exe 名会让它去找 Gravity++.pri，
+         找不到就在第一次建面板时静默崩（日志里连 ShowPanel 都没有）。所以 pri 也要同名再放一份。 -->
+  <Target Name="GravityPlusExe" AfterTargets="Build">
+    <Copy SourceFiles="$(OutDir)$(AssemblyName).exe" DestinationFiles="$(OutDir)Gravity++.exe" />
+    <Copy SourceFiles="$(OutDir)$(AssemblyName).pri" DestinationFiles="$(OutDir)Gravity++.pri"
+          Condition="Exists('$(OutDir)$(AssemblyName).pri')" />
+  </Target>
+  <Target Name="GravityPlusExePublish" AfterTargets="Publish">
+    <Copy SourceFiles="$(PublishDir)$(AssemblyName).exe" DestinationFiles="$(PublishDir)Gravity++.exe" />
+    <Copy SourceFiles="$(PublishDir)$(AssemblyName).pri" DestinationFiles="$(PublishDir)Gravity++.pri"
+          Condition="Exists('$(PublishDir)$(AssemblyName).pri')" />
+    <Delete Files="$(PublishDir)$(AssemblyName).exe" />
+  </Target>
 </Project>

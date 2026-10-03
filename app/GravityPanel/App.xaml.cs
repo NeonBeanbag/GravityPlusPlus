@@ -74,7 +74,7 @@ public sealed partial class App : Application
 
     private void CreateTray()
     {
-        _tray = new TaskbarIcon { ToolTipText = "Gravity 音响面板" };
+        _tray = new TaskbarIcon { ToolTipText = "Gravity++" };
         var ico = Path.Combine(AppContext.BaseDirectory, "icon.ico");
         if (File.Exists(ico))
             try { _tray.Icon = new Icon(ico); } catch (Exception e) { Log.Write("托盘图标读取失败: " + e); }
