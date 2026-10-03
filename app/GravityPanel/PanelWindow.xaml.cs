@@ -83,8 +83,8 @@ public sealed partial class PanelWindow : Window
             if (want > cap) want = cap;
         }
         if (Math.Abs(want - _logicalH) < 2) return;
-        _logicalH = want;
-        Place();
+        _logicalH = want;          // 收起状态也先记下，下次 show 一上来就是对的尺寸
+        if (IsShown) Place();      // ★ 收起时不能碰 Place()，那会把面板掀出来
     }
 
 
@@ -138,8 +138,9 @@ public sealed partial class PanelWindow : Window
         }
     }
 
-    /// <summary>贴主显示器工作区右下角；尺寸每次重算，缩放/换屏后不会跑到屏幕外。</summary>
-    private void Place()
+    /// <summary>贴主显示器工作区右下角；尺寸每次重算，缩放/换屏后不会跑到屏幕外。
+    /// ★ show 与否由调用方决定：这里带 SWP_SHOWWINDOW 会把"收起状态"的面板直接掀出来（空白一块）。</summary>
+    private void Place(bool show = false)
     {
         double s = Scale;
         int w = (int)Math.Round(LogicalW * s);
@@ -155,7 +156,8 @@ public sealed partial class PanelWindow : Window
         if (x < mi.rcWork.Left) x = mi.rcWork.Left;
         if (y < mi.rcWork.Top) y = mi.rcWork.Top;
 
-        Native.SetWindowPos(_hwnd, Consts.HWND_TOPMOST, x, y, w, h, Consts.SWP_SHOWWINDOW | Consts.SWP_NOACTIVATE);
+        uint flags = Consts.SWP_NOACTIVATE | (show ? Consts.SWP_SHOWWINDOW : 0u);
+        Native.SetWindowPos(_hwnd, Consts.HWND_TOPMOST, x, y, w, h, flags);
         Log.Write($"定位: {w}x{h} @ ({x},{y}) scale={s:F2}");
     }
 
@@ -165,7 +167,9 @@ public sealed partial class PanelWindow : Window
     {
         _hideToken++;          // 取消进行中的淡出
         _hidePending = false;
-        Place();
+        Home.UpdateLayout();     // 先量一次（窗口还没显示，量完才是真实内容高度）
+        FitHeight();           // 免得弹出来之后肉眼看见它连跳两下
+        Place(show: true);
         IsShown = true;
         Native.ShowWindow(_hwnd, Consts.SW_SHOWNA);
 
