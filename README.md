@@ -89,4 +89,4 @@ node gravity_provision.mjs --ssid MyWiFi-A --pass 'your-wifi-password'
 
 ## 许可证
 
-待定。
+MIT，见 [LICENSE](LICENSE)。
