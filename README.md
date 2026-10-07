@@ -2,8 +2,18 @@
 
 把一块**变砖的 MEIZU Gravity（A8）音响**在**纯 Windows** 下救活并日常使用：不用安卓手机、不用监听模式的无线网卡。
 
+## 下载即用（免安装版）
+
+不想装任何东西：到 [Releases](https://github.com/NeonBeanbag/GravityPlusPlus/releases) 下载 `GravityPP-<版本>-win-x64.zip`（约 70 MB），**解压成一个文件夹**，双击里面的 `Gravity++.exe` 就行。
+
+- 运行库全部打包在里面，机器上没有 .NET / Visual Studio 也能跑；要求 Windows 10 19041 或更高（64 位）。
+- 程序没有代码签名，第一次运行 Windows SmartScreen 可能弹「已保护你的电脑」→ 点「更多信息」→「仍要运行」。
+- 解压后文件夹里的 `使用说明.txt` 写了托盘、热键和配网的操作步骤。
+
+下面是仓库内容和技术说明（自己编译 / 用脚本取证的话看这里）。
+
 - **配网**：Windows 直接对着空中发 Broadcom **Cooee / Airkiss** 长度编码包，把音响重新连上 Wi-Fi（它被重置后没有已存网络，官方 App 又只支持安卓，所以这块砖原本只能扔）
-- **托盘面板**：WinUI 3 原生小面板，正在播放 / 音量 / 音效 / 设备连接，走音响自带的 7766 HTTP 接口
+- **托盘面板**：WinUI 3 原生小面板，正在播放 / 音量 / 音效 / 设备连接，走音响自带的 7766 HTTP 接口。面板不靠记死的 IP：音响的 DLNA 接收端会应答 SSDP 组播，DHCP 换了地址它自己按 deviceID（MAC）找回同一台
 - **音源**：音响的 WiFi 音源是它自带的 **AirPlay** 接收端（fireair），Windows 版 Apple Music 点投屏即可出声；本仓库也自带一个实验性的 RAOP 发送端
 - **设备侧工具**：网络 adb（7788）、`system_daemon`（8888）回读解码结果，用于取证而不是猜
 
@@ -30,6 +40,17 @@ dotnet build -c Release
 
 跑起来后托盘会出现图标：左键点开/收起，右键菜单里有「开机自启」。
 
+打**免安装包**（就是 Releases 里那个 zip，自包含 + 免打包，收进 `dist/`）：
+
+```bash
+cd app/GravityPanel
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -o ../../dist/GravityPP
+cd ../../dist
+powershell -File zip_portable.ps1   # 或压缩 GravityPP 目录里的全部内容（zip 根就是程序文件）
+```
+
+> 不要改 `AssemblyName`：WinUI 按**进程名**找同名 `.pri`，所以发布后会有 `Gravity++.exe` + `Gravity++.pri` 一对（`GravityPanel.*` 那份也留着）。`.pri` 少一个就是一次没有日志的原生崩溃。
+
 **呼起面板的两条对外接口**（给别的软件或快捷键用）：
 
 ```bash
@@ -44,6 +65,7 @@ Gravity++.exe --toggle-panel          # 单实例 IPC：面板没开就开，开
 Gravity++.exe --probe env      # 当前 Wi-Fi / 网卡合并 / 防火墙 / 本机 WLAN IP
 Gravity++.exe --probe send     # 配网包发得出去吗（3 秒假账号，随即停止）
 Gravity++.exe --probe link     # 音响现在听谁 + 本机 SMTC 认到了什么
+Gravity++.exe --probe find     # 不读存下来的 IP，现场能不能自己找到音响（名字 / IP / deviceID）
 ```
 
 ## 配网（cooee / Airkiss）
