@@ -23,6 +23,7 @@ public sealed partial class HomePage : UserControl
     private readonly DispatcherTimer volCommit = new() { Interval = TimeSpan.FromMilliseconds(600) };
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(1) };
     private string ip = "";
+    private string devName = "";
     private bool suppressEq;
     private bool suppressVol;
     private byte[]? lastCover;
@@ -33,6 +34,9 @@ public sealed partial class HomePage : UserControl
     private int watchTick;
     private bool wasRunning;
     private bool busy;
+    private bool finding;
+    private bool refreshing;
+    private long lastFind;
 
     public HomePage()
     {
@@ -58,6 +62,7 @@ public sealed partial class HomePage : UserControl
             ip = Prefs.SpeakerIp ?? "";
             IpBox.Text = ip;
             if (ip != "") _ = ConnectAsync();
+            else _ = AdoptFoundAsync(silent: true);
             if (Core.Cooee.Current.Running)
             {
                 ConnToggle.IsChecked = true; ProvToggle.IsChecked = true;
@@ -71,6 +76,14 @@ public sealed partial class HomePage : UserControl
 
     private async Task RefreshAsync()
     {
+        if (refreshing) return;            // 音响掉线时一次读要 8 秒，别让 5 秒一次的轮询叠起来
+        refreshing = true;
+        try { await ReadStatusAsync(); }
+        finally { refreshing = false; }
+    }
+
+    private async Task ReadStatusAsync()
+    {
         ip = Prefs.SpeakerIp ?? "";
         if (ip == "")
         {
@@ -82,7 +95,7 @@ public sealed partial class HomePage : UserControl
         {
             var s = await Core.Speaker.ReadAsync(ip);
             PlayCard.Visibility = VolCard.Visibility = Visibility.Visible;
-            App.SetStatus($"已连接 {ip}");
+            App.SetStatus("已连接 " + (devName == "" ? ip : $"{devName} · {ip}"));
             App.SetSource(SourceName(s.InputSource));
             PlayGlyph.Glyph = s.Now.Status == "STARTED" ? GlyphPause : GlyphPlay;
 
@@ -103,10 +116,12 @@ public sealed partial class HomePage : UserControl
         }
         catch (Exception ex)
         {
-            poll.Stop();
             Collapse();
-            App.SetStatus("未连接");
             Log.Write("刷新失败: " + ex);
+            // 最常见的原因不是音响坏了，是它的 DHCP 租约变了 —— 先自己找一遍，找到了就别来烦用户。
+            // 找不到也继续轮询：音响后来开机了，这一卡自己就活过来。
+            if (await RediscoverAsync()) return;
+            App.SetStatus("未连接");
         }
     }
 
@@ -216,34 +231,89 @@ public sealed partial class HomePage : UserControl
 
     private async Task ConnectAsync()
     {
-        ip = IpBox.Text.Trim();
-        if (!SpeakerApi.LooksLikeIp(ip)) { Say("IP 不对", on: false); return; }
+        var addr = IpBox.Text.Trim();
+        if (!SpeakerApi.LooksLikeIp(addr)) { Say("IP 不对", on: false); return; }
         Say("连接中…", on: false);
-        if (!await Core.Speaker.PingAsync(ip))
+        var dev = await Core.Speaker.IdentifyAsync(addr);
+        if (dev is null)
         {
+            // 存的地址八成是 DHCP 漂走了 —— 先按 MAC 找回来，找不到再让人去点扫描
+            if (addr == (Prefs.SpeakerIp ?? "") && await AdoptFoundAsync(silent: true)) return;
             Say("连不上（检查 IP / 同网段 / 音响已开机）", on: false);
             return;
         }
-        Prefs.SpeakerIp = ip;
-        Say($"已连接 {ip}", on: true);
-        await RefreshAsync();
+        await AdoptAsync(dev);
+    }
+
+    /// <summary>接上并记住它：IP 会漂，deviceID（MAC）不会，所以两个都存。</summary>
+    private async Task AdoptAsync(SpeakerApi.Device dev)
+    {
+        var old = Prefs.SpeakerIp;
+        Prefs.SpeakerIp = dev.Ip;
+        Prefs.SpeakerId = dev.Id;
+        ip = dev.Ip;
+        devName = dev.Name;
+        IpBox.Text = dev.Ip;
+        Log.Write($"接上音响：{dev.Name} ({dev.Id}) @ {dev.Ip}" + (old is { Length: > 0 } && old != dev.Ip ? $"（原 {old}）" : ""));
+        // 状态串要和"自检"按钮挤同一行（约 24 个字），所以只放最短的那句；设备名和旧 IP 进日志，新 IP 展开就有
+        Say(old is { Length: > 0 } && old != dev.Ip ? "IP 变了，已接上" : $"已连接 {dev.Ip}", on: true);
+        await ReadStatusAsync();
         poll.Start();
+    }
+
+    /// <summary>没记 IP（或 IP 失效）时自己找一台音响。多台又认不出原来那台就不猜，列出来让人点。</summary>
+    private async Task<bool> AdoptFoundAsync(bool silent)
+    {
+        if (finding) return false;
+        finding = true;
+        try
+        {
+            if (!silent) Say("搜索中…", on: null);
+            var found = await Core.Speaker.FindAllAsync();
+            var pick = found.FirstOrDefault(d => Prefs.SpeakerId != null && d.Id == Prefs.SpeakerId)
+                    ?? (found.Count == 1 ? found[0] : null);
+            if (pick is null)
+            {
+                if (found.Count > 0) FillScanList(found);
+                if (!silent || found.Count > 1)
+                    Say(found.Count == 0 ? "未发现设备" : $"找到 {found.Count} 台，点一下选哪台", on: false);
+                return false;
+            }
+            await AdoptAsync(pick);
+            return true;
+        }
+        finally { finding = false; }
+    }
+
+    /// <summary>轮询断了之后的一次自救，60 秒内不重复（免得对着断网的音响猛发组播）。</summary>
+    private async Task<bool> RediscoverAsync()
+    {
+        var now = Environment.TickCount64;
+        if (now - lastFind < 60_000) return false;
+        lastFind = now;
+        return await AdoptFoundAsync(silent: true);
+    }
+
+    private void FillScanList(List<SpeakerApi.Device> found)
+    {
+        ScanList.Items.Clear();
+        foreach (var d in found)
+        {
+            var b = new Button { Content = $"{d.Name} · {d.Ip}" };
+            b.Click += (_, _) => _ = AdoptAsync(d);
+            ScanList.Items.Add(b);
+        }
     }
 
     private async void OnScan(object sender, RoutedEventArgs e)
     {
         BtnScan.IsEnabled = false;
         ScanList.Items.Clear();
-        Say("扫描中…", on: null);
-        var found = await Core.Speaker.ScanAsync();
-        foreach (var f in found)
+        try
         {
-            var b = new Button { Content = f };
-            b.Click += (_, _) => { IpBox.Text = f; _ = ConnectAsync(); };
-            ScanList.Items.Add(b);
+            if (await AdoptFoundAsync(silent: false)) return;
         }
-        if (found.Count == 0) Say("未发现设备", on: false);
-        BtnScan.IsEnabled = true;
+        finally { BtnScan.IsEnabled = true; }
     }
 
     private void Say(string text, bool? on)

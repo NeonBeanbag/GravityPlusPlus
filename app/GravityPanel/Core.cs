@@ -64,7 +64,8 @@ internal static class Probe
             "env" => EnvText().GetAwaiter().GetResult(),
             "send" => SendText().GetAwaiter().GetResult(),
             "link" => LinkText().GetAwaiter().GetResult(),
-            _ => "未知探针：" + what + "（可用：env | send | link）\n",
+            "find" => FindText().GetAwaiter().GetResult(),
+            _ => "未知探针：" + what + "（可用：env | send | link | find）\n",
         };
         if (string.IsNullOrEmpty(outPath)) Console.Out.Write(text);
         else System.IO.File.WriteAllText(outPath, text);
@@ -102,6 +103,16 @@ internal static class Probe
              + $"firewall allow={e.FwAllow} blocked={e.FwBlocked} ok={e.FwOk} port={Core.StreamPort}\n"
              + $"wifiCurrent={e.CurSsid}\n"
              + $"wifiSeen={string.Join(" | ", e.Nets.Select(t => $"{t.ssid}@ch{t.ch}"))}\n";
+    }
+
+    /// <summary>验"不记 IP 能不能自己找到音响"：SSDP 应答 → 每台再拿 /Info 实名，认不出来的不算。</summary>
+    private static async Task<string> FindText()
+    {
+        var sb = new StringBuilder($"savedIp={Prefs.SpeakerIp ?? "-"} savedId={Prefs.SpeakerId ?? "-"}\n");
+        var list = await Core.Speaker.FindAllAsync();
+        if (list.Count == 0) return sb.Append("found=none\n").ToString();
+        foreach (var d in list) sb.Append($"found={d.Name}|{d.Ip}|{d.Id}\n");
+        return sb.ToString();
     }
 
     /// <summary>验「正在播放」卡的数据通路：音响现在听谁 + 本机 SMTC 认到了什么。</summary>

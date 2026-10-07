@@ -6,7 +6,7 @@ namespace GravityPanel;
 /// <summary>少量偏好落盘在 %LOCALAPPDATA%\Gravity++\panel.json（旧面板用的是浏览器 localStorage）。</summary>
 internal static class Prefs
 {
-    private sealed record Model(string? SpeakerIp, bool PreferNextOnly, string? Hotkey);
+    private sealed record Model(string? SpeakerIp, string? SpeakerId, bool PreferNextOnly, string? Hotkey);
 
     private static readonly string FilePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Gravity++", "panel.json");
@@ -18,10 +18,10 @@ internal static class Prefs
         try
         {
             return File.Exists(FilePath)
-                ? JsonSerializer.Deserialize<Model>(File.ReadAllText(FilePath)) ?? new(null, false, null)
-                : new(null, false, null);
+                ? JsonSerializer.Deserialize<Model>(File.ReadAllText(FilePath)) ?? new(null, null, false, null)
+                : new(null, null, false, null);
         }
-        catch { return new(null, false, null); }
+        catch { return new(null, null, false, null); }
     }
 
     private static void Save()
@@ -38,6 +38,13 @@ internal static class Prefs
     {
         get => _m.SpeakerIp;
         set { _m = _m with { SpeakerIp = value }; Save(); }
+    }
+
+    /// <summary>连过的那台音响的 deviceID（MAC）。音响换 IP 时靠它认回同一台，不会串到邻居的音响上去。</summary>
+    public static string? SpeakerId
+    {
+        get => _m.SpeakerId;
+        set { _m = _m with { SpeakerId = value }; Save(); }
     }
 
     public static bool PreferNextOnly

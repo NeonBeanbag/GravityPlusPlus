@@ -71,13 +71,20 @@
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="设备连接" VerticalAlignment="Center"
                                        Style="{StaticResource BodyStrongTextBlockStyle}" />
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="8,0,0,0">
-                                <Ellipse x:Name="Dot" Width="9" Height="9" VerticalAlignment="Center"
+                            <Grid Grid.Column="1" ColumnSpacing="8" Margin="8,0,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Ellipse x:Name="Dot" Grid.Column="0" Width="9" Height="9" VerticalAlignment="Center"
                                          Fill="{ThemeResource TextFillColorTertiaryBrush}" />
-                                <TextBlock x:Name="ConnState" Text="未连接" VerticalAlignment="Center"
+                                <!-- 必须放在 Grid 的 * 列里才会被限宽：StackPanel 给子项无限宽，长状态串会被"自检"按钮直接切掉 -->
+                                <TextBlock x:Name="ConnState" Grid.Column="1" Text="未连接" VerticalAlignment="Center"
+                                           TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                                           ToolTipService.ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
                                            Style="{StaticResource CaptionTextBlockStyle}"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            </StackPanel>
+                            </Grid>
                             <Button Grid.Column="2" x:Name="BtnEnv" Content="自检">
                                 <Button.Flyout>
                                     <Flyout x:Name="EnvFly" Placement="Bottom">
@@ -134,7 +141,7 @@
                                      KeyDown="OnIpKeyDown" />
                             <Button x:Name="BtnConnect" Grid.Column="1" Style="{StaticResource AccentButtonStyle}"
                                     Content="连接" Click="OnConnect" />
-                            <Button x:Name="BtnScan" Grid.Column="2" Content="扫描局域网" Click="OnScan" />
+                            <Button x:Name="BtnScan" Grid.Column="2" Content="搜索设备" Click="OnScan" />
                         </Grid>
                         <ItemsControl x:Name="ScanList">
                             <ItemsControl.ItemsPanel>
